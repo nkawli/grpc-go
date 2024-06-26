@@ -515,7 +515,7 @@ func newLoopyWriter(s side, fr *framer, cbuf *controlBuffer, bdpEst *bdpEstimato
 	return l
 }
 
-const minBatchSize = 1000
+const minBatchSize = 10000
 
 // run should be run in a separate goroutine.
 // It reads control frames from controlBuf and processes them by:
@@ -559,7 +559,8 @@ func (l *loopyWriter) run() (err error) {
 		if _, err = l.processData(); err != nil {
 			return err
 		}
-		gosched := true
+		// gosched := true
+		goschedcount := 0
 	hasdata:
 		for {
 			it, err := l.cbuf.get(false)
@@ -582,8 +583,8 @@ func (l *loopyWriter) run() (err error) {
 			if !isEmpty {
 				continue hasdata
 			}
-			if gosched {
-				gosched = false
+			if goschedcount < 3 {
+				goschedcount++
 				if l.framer.writer.offset < minBatchSize {
 					runtime.Gosched()
 					continue hasdata
